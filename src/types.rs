@@ -1,7 +1,9 @@
-use crate::env::Environment;
+use crate::env::{Env, EnvFunc};
+use crate::eval;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-use crate::evaluator::eval;
+use std::rc::Rc;
 
 pub type Args = Vec<Types>;
 
@@ -19,10 +21,8 @@ pub enum Types {
     Vector(Vec<Types>),
     Dict(HashMap<String, Types>),
     Func(fn(&mut Args) -> Result<Types, String>),
-    UserFunc {
-        ast: Box<Types>,
-        params: Box<Types>,
-    },
+    Atom(Rc<RefCell<Types>>),
+    UserFunc { ast: Box<Types>, params: Box<Types> },
 }
 
 impl PartialEq for Types {
@@ -59,17 +59,17 @@ impl fmt::Debug for Types {
             Types::Dict(x) => write!(f, "{}", format!("Dict({:?})", x)),
             Types::Func(_) => write!(f, "Fn"),
             Types::UserFunc { .. } => write!(f, "UserFunc"),
-            _ => write!(f, "Not implemented"),
+            Types::Atom(x) => write!(f, "Atom({:?})", x),
+            Types::Error(x) => write!(f, "Error ({})", x),
+            Types::Nil() => write!(f, "Nil"),
         }
     }
 }
 
 impl Types {
-    pub fn apply(&self, args: &mut Args, env: &mut Environment) -> Result<Types, String> {
+    pub fn apply(&self, args: &mut Args, env: &mut Env) -> Result<Types, String> {
         match &*self {
-            Types::Func(f) => {
-                f(args)
-            }
+            Types::Func(f) => f(args),
             Types::UserFunc {
                 ref ast,
                 ref params,
@@ -77,10 +77,13 @@ impl Types {
             } => {
                 let a = &**ast;
                 let b = &**params;
-                let mut new_env = Environment::new();
-                new_env.outer = Some(Box::new(env.clone()));
+                // println!("AST {:?}", a);
+                // println!("Param {:?}", b);
+                // println!("Args {:?}", args);
+                let new_env: Env = EnvFunc::new(Some(env.clone()));
                 new_env.env_bind(b.clone(), args.to_vec())?;
-                Ok(eval(a.clone(), &mut new_env)?)
+                *env = new_env.clone();
+                Ok(eval(a.clone(), new_env.clone())?)
             }
             _ => Err("Attempted to call a non-function".to_string()),
         }

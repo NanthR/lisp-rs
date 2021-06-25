@@ -52,48 +52,40 @@ pub fn pr_str(fin: Types, print_readably: bool) -> String {
             let temp = "{".to_string() + &temp;
             res.push(temp);
         }
-        Types::Nil() => {
-            res.push("nil".to_string());
-        }
-        Types::Symbol(x) => {
-            // println!("{}", x);
-            match x.as_str() {
-                "'" => res.push("quote".to_string()),
-                "`" => res.push("quasiquote".to_string()),
-                "~" => res.push("unquote".to_string()),
-                _ => res.push(x),
-            }
-        }
+        Types::Nil() => res.push("nil".to_string()),
+        Types::Symbol(x) => match x.as_str() {
+            "'" => res.push("quote".to_string()),
+            "`" => res.push("quasiquote".to_string()),
+            "~" => res.push("unquote".to_string()),
+            _ => res.push(x),
+        },
         Types::List(x) => {
-            let mut fin = vec![];
-            for i in x {
-                fin.push(pr_str(i, print_readably));
-            }
-            // println!("{:?}", fin);
+            let fin = x
+                .iter()
+                .map(|i| pr_str(i.clone(), print_readably))
+                .collect::<Vec<String>>();
             let val = "(".to_string() + &fin.join(" ");
             let val = val + ")";
             res.push(val);
         }
         Types::Vector(x) => {
-            let mut fin = vec![];
-            for i in x {
-                fin.push(pr_str(i, print_readably));
-            }
+            let fin = x
+                .iter()
+                .map(|i| pr_str(i.clone(), print_readably))
+                .collect::<Vec<String>>();
             let val = "[".to_string() + &fin.join(" ");
             let val = val + "]";
             res.push(val);
         }
-        Types::Int(x) => {
-            res.push(x.to_string());
-        }
-        Types::Error(x) => {
-            res = vec![x];
-        }
-        Types::Func(_) => {
-            res.push("#<function>".to_string());
-        }
+        Types::Int(x) => res.push(x.to_string()),
+        Types::Error(x) => res = vec![x],
+        Types::Func(_) => res.push("#<function>".to_string()),
         Types::Float(x) => res.push(x.to_string()),
         Types::UserFunc { .. } => res.push("#<function>".to_string()),
+        Types::Atom(x) => {
+            let fin = "(atom ".to_string() + &(pr_str((*x.borrow()).clone(), print_readably));
+            res.push(fin + ")");
+        }
     }
     // println!("{:?}", res);
     res.join(" ")

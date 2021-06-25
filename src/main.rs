@@ -7,10 +7,10 @@ pub mod evaluator;
 pub mod printer;
 mod reader;
 pub mod types;
-use env::Environment;
+use env::{Env, EnvFunc};
 use evaluator::eval;
 
-fn read(line: &str) -> Types {
+pub fn read(line: &str) -> Types {
     let mut tokenizer = reader::Tokenizer::new(line);
     tokenizer.read_str()
 }
@@ -19,9 +19,9 @@ fn print(ast: Types) -> String {
     printer::pr_str(ast, true)
 }
 
-fn rep(line: &str, env: &mut Environment) -> Result<Types, String> {
+pub fn rep(line: &str, env: &Env) -> Result<Types, String> {
     let ast = read(line);
-    eval(ast, env)
+    eval(ast, env.clone())
 }
 
 fn main() {
@@ -30,16 +30,17 @@ fn main() {
         println!("No previous history");
     };
 
-    let mut env = Environment::new();
+    let env: Env = EnvFunc::new(None);
+    // Set up core functions
     env.set_core_func();
-    rep("(def! not (fn* (a) (if a false true)))", &mut env).unwrap();
+    rep("(def! not (fn* (a) (if a false true)))", &env).unwrap();
 
     loop {
         let readline = rl.readline("user> ");
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
-                let x = rep(&line, &mut env);
+                let x = rep(&line, &env);
                 match x {
                     Ok(x) => println!("{}", print(x)),
                     Err(x) => println!("{}", x),

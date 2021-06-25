@@ -107,7 +107,12 @@ impl<'a> Tokenizer<'a> {
                 ';' => {
                     let mut fin = String::new();
                     while self.chars.peek().is_some() {
-                        fin.push(self.chars.next().unwrap());
+                        let c = self.chars.next().unwrap();
+                        if c == '\n' {
+                            break;
+                        } else {
+                            fin.push(c);
+                        }
                     }
                     // res.push(fin);
                 }
@@ -117,7 +122,7 @@ impl<'a> Tokenizer<'a> {
                         let val = self.chars.peek().unwrap();
                         match val {
                             '[' | ']' | '{' | '}' | '(' | ')' | '`' | '\'' | '^' | '@' | ' '
-                            | '\"' | ',' | ';' => {
+                            | '\"' | ',' | ';' | '\n' | '\t' => {
                                 break;
                             }
                             _ => {
@@ -129,7 +134,6 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
-        // println!("{:?}", res);
         self.tokens = res;
         self.cur_token = 0;
     }
@@ -161,10 +165,8 @@ impl<'a> Tokenizer<'a> {
             "{" => "}",
             _ => "",
         };
-        // println!("{}", end);
         while self.peek().is_some() {
             let val = self.peek().unwrap();
-            // println!("{}", val);
             if val == end {
                 done = true;
                 self.next().unwrap();
@@ -173,7 +175,6 @@ impl<'a> Tokenizer<'a> {
                 res.push(self.read_form());
             }
         }
-        // println!("{:?}", res);
         if done {
             match x {
                 "[" => Types::Vector(res),
