@@ -321,5 +321,24 @@ pub fn namespace() -> Vec<(&'static str, Types)> {
                 }
             }),
         ),
+        // (
+        //     "swap!", Types::Func(|a| {
+        //         check_len(a, 2)?;
+        //         match &a[0] {
+        //             Types::Atom(mut x) => {
+        //                 let f = &a[1];
+        //                 let mut args = if a.len() > 2 {
+        //                     a[2..a.len() - 1].to_vec()
+        //                 } else {
+        //                     vec![]
+        //                 };
+        //                 args.insert(0, (*x).clone());
+        //                 *x = f.apply(args)?;
+        //                 Ok((*x).clone())
+        //             }
+        //             _ => Err("Can only be applied on atoms".to_string())
+        //         }
+        //     })
+        // )
     ]
 }

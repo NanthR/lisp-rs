@@ -22,7 +22,11 @@ pub enum Types {
     Dict(HashMap<String, Types>),
     Func(fn(&mut Args) -> Result<Types, String>),
     Atom(Rc<RefCell<Types>>),
-    UserFunc { ast: Box<Types>, params: Box<Types> },
+    UserFunc {
+        ast: Box<Types>,
+        params: Box<Types>,
+        env: Env,
+    },
 }
 
 impl PartialEq for Types {
@@ -67,23 +71,19 @@ impl fmt::Debug for Types {
 }
 
 impl Types {
-    pub fn apply(&self, args: &mut Args, env: &mut Env) -> Result<Types, String> {
+    pub fn apply(&self, args: &mut Args) -> Result<Types, String> {
         match &*self {
             Types::Func(f) => f(args),
             Types::UserFunc {
                 ref ast,
                 ref params,
-                ..
+                env,
             } => {
                 let a = &**ast;
                 let b = &**params;
-                // println!("AST {:?}", a);
-                // println!("Param {:?}", b);
-                // println!("Args {:?}", args);
-                let new_env: Env = EnvFunc::new(Some(env.clone()));
-                new_env.env_bind(b.clone(), args.to_vec())?;
-                *env = new_env.clone();
-                Ok(eval(a.clone(), new_env.clone())?)
+                let cur_env: Env = EnvFunc::new(Some(env.clone()));
+                cur_env.env_bind(b.clone(), args.to_vec())?;
+                Ok(eval(a.clone(), cur_env.clone())?)
             }
             _ => Err("Attempted to call a non-function".to_string()),
         }

@@ -23,6 +23,17 @@ fn eval_ast(ast: Types, env: &Env) -> Result<Types, String> {
     }
 }
 
+pub fn load_file(x: String, env: &mut Env) -> Result<Types, String> {
+    match fs::read_to_string(x) {
+        Ok(y) => {
+            let z = y + "\nnil)";
+            let z = "(do ".to_string() + &z;
+            rep(&z, env)
+        }
+        Err(_) => Err("File error".to_string()),
+    }
+}
+
 pub fn eval(mut ast: Types, mut env: Env) -> Result<Types, String> {
     let ret: Result<Types, String>;
     'tco: loop {
@@ -121,25 +132,20 @@ pub fn eval(mut ast: Types, mut env: Env) -> Result<Types, String> {
                                 Ok(Types::UserFunc {
                                     ast: Box::new(ast_here),
                                     params: Box::new(params),
+                                    env: env,
                                 })
                             }
                         }
                         Types::Symbol(x) if x == "eval" => {
                             ast = eval(res[1].clone(), env.clone())?;
-                            // println!("{:?}", ast);
+                            while let Some(ref outer) = env.clone().outer {
+                                env = outer.clone();
+                            }
                             continue 'tco;
                         }
                         Types::Symbol(x) if x == "load-file" => {
                             if let Types::Simple(x) = &res[1] {
-                                match fs::read_to_string(x) {
-                                    Ok(y) => {
-                                        let z = y + "\nnil)";
-                                        let z = "(do ".to_string() + &z;
-                                        // println!("{:?}", z);
-                                        rep(&z, &env)
-                                    }
-                                    Err(_) => Err("File error".to_string()),
-                                }
+                                load_file(x.to_string(), &mut env)
                             } else {
                                 Err("Provide file name as string".to_string())
                             }
@@ -149,24 +155,17 @@ pub fn eval(mut ast: Types, mut env: Env) -> Result<Types, String> {
                                 Err("Invalid number of arguements".to_string())
                             } else {
                                 let res = eval_ast(Types::List(res[1..].to_vec()), &env)?;
-                                // println!("{:?}", res);
                                 if let Types::List(res) = res {
                                     if let Types::Atom(x) = res[0].clone() {
                                         let f = &res[1];
                                         let mut args = if res.len() > 2 {
-                                            // println!("Hey");
                                             res[2..].to_vec()
                                         } else {
                                             vec![]
                                         };
                                         args.insert(0, (*x).borrow().clone());
-                                        println!("{:?}", args);
-                                        let res = f.apply(&mut args, &mut env)?;
-                                        // println!("{:?}", x);
-                                        // println!("{:?}", env);
+                                        let res = f.apply(&mut args)?;
                                         *x.borrow_mut() = res.clone();
-                                        // println!("{:?}", env);
-                                        // println!("{:?}", x);
                                         Ok((*x.borrow()).clone())
                                     } else {
                                         Err("Can only be applied on atoms".to_string())
@@ -178,11 +177,9 @@ pub fn eval(mut ast: Types, mut env: Env) -> Result<Types, String> {
                         }
                         _ => {
                             let res = eval_ast(ast, &env)?;
-                            // println!("{:?}", res);
-                            // println!("{:?}", env);
                             if let Types::List(res) = res {
                                 let ref f = res[0].clone();
-                                let res = f.apply(&mut (res[1..].to_vec()), &mut env)?;
+                                let res = f.apply(&mut (res[1..].to_vec()))?;
                                 Ok(res)
                                 // match f {
                                 //     Types::Func(_) => Ok(res),
@@ -201,7 +198,9 @@ pub fn eval(mut ast: Types, mut env: Env) -> Result<Types, String> {
                     }
                 }
             }
-            _ => eval_ast(ast, &env),
+            _ => {
+                eval_ast(ast, &env)
+            },
         };
         break;
     }

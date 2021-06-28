@@ -152,6 +152,10 @@ impl<'a> Tokenizer<'a> {
                 self.next().unwrap();
                 self.read_list("{")
             }
+            "@" => {
+                self.next().unwrap();
+                Types::List(vec![Types::Symbol("deref".to_string()), self.read_form()])
+            }
             _ => self.read_atom(),
         }
     }
